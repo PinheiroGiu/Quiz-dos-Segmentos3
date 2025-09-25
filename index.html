@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Quiz Vocacional – Senac</title>
+  <style>
+    :root{
+      --bg:#0f172a; /* slate-900 */
+      --card:#111827; /* gray-900 */
+      --muted: rgba(255, 255, 255, 0.85);
+      --text: #ffffff;
+      --brand:#f97316; /* orange-500 */
+      --brand-2:#2563eb; /* blue-600 */
+      --ok:#22c55e; /* green-500 */
+      --bad:#ef4444; /* red-500 */
+      --ring: 0 0 0 3px rgba(37,99,235,.25);
+      --radius: 18px;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, "Helvetica Neue", Arial, "Apple Color Emoji", "Segoe UI Emoji";
+      background: radial-gradient(1200px 800px at 20% -10%, rgba(37,99,235,.15), transparent 60%),
+                  radial-gradient(1200px 800px at 120% 120%, rgba(249,115,22,.15), transparent 60%),
+                  var(--bg);
+      color:var(--text);
+      display:grid; place-items:center; padding:24px;
+    }
+    .app{width:100%; max-width:680px;}
+    .card{background:linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02));
+      border:1px solid rgba(255,255,255,.06); border-radius:var(--radius); padding:24px; box-shadow: 0 10px 30px rgba(0,0,0,.35); backdrop-filter:saturate(1.1) blur(6px);
+    }
+    header{display:flex; gap:16px; align-items:center; justify-content:space-between; margin-bottom:18px}
+    .title{font-weight:800; letter-spacing:.2px; line-height:1.1; font-size: clamp(22px, 2.6vw, 32px)}
+    .subtitle{color:var(--muted); font-size:clamp(12px,1.6vw,14px)}
+    
+    .logo-senac{
+        max-height: 45px;
+        margin-bottom: 24px;
+    }
+
+    #trigger-question{
+        font-size: clamp(18px, 2.2vw, 24px);
+        font-weight: 700;
+        text-align: center;
+        margin: 16px 0 24px 0;
+    }
+    #trigger-options{
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+    }
+    .trigger-opt {
+        background:rgba(255,255,255,.03); border:1px solid rgba(255,255,255,.08); padding:16px;
+        border-radius:12px; cursor:pointer; transition:.2s; text-align: center;
+        font-size: 15px;
+        color: var(--text);
+    }
+    .trigger-opt:hover{
+        border-color: rgba(249,115,22,.45);
+        background:rgba(255,255,255,.05);
+        transform: translateY(-2px);
+    }
+    
+    .controls{display:flex; gap:10px; flex-wrap:wrap; margin-top:16px}
+    .btn{appearance:none; border:none; padding:12px 16px; border-radius:12px; cursor:pointer; font-weight:700; letter-spacing:.2px; transition:.2s transform, .2s background, .2s box-shadow;}
+    .btn:focus{outline:none; box-shadow: var(--ring)}
+    .btn.primary{background:linear-gradient(180deg, var(--brand), #ea580c); color:white}
+    .btn.secondary{background:linear-gradient(180deg, var(--brand-2), #1d4ed8); color:white}
+    .btn.ghost{background:transparent; border:1px solid rgba(255,255,255,.12); color:var(--text)}
+    .btn:hover{transform:translateY(-1px)}
+
+    .question{margin-top:6px; font-size:20px; font-weight:700}
+    .options{display:grid; gap:10px; margin-top:16px}
+    .opt{background:rgba(255,255,255,.03); border:1px solid rgba(255,255,255,.08); padding:12px 14px; border-radius:12px; cursor:pointer; transition:.2s; color: var(--text);}
+    .opt:hover{border-color: rgba(37,99,235,.45)}
+    .opt.selected{border-color: var(--brand-2); background:rgba(37,99,235,.12)}
+    .opt.correct{border-color: var(--ok); background: rgba(34,197,94,.12)}
+    .opt.wrong{border-color: var(--bad); background: rgba(239,68,68,.12)}
+
+    .progress{height:8px; background:rgba(255,255,255,.09); border-radius:999px; overflow:hidden; margin-top:12px}
+    .bar{height:100%; background:linear-gradient(90deg, var(--brand-2), var(--brand)); width:0%}
+
+    .result-box{display:grid; gap:12px}
+    .pill{display:inline-block; padding:6px 10px; border-radius:999px; font-size:12px; background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.1)}
+    .courses{display:flex; flex-wrap:wrap; gap:8px}
+    .course{padding:8px 10px; border-radius:10px; border:1px dashed rgba(255,255,255,.18); font-size:13px}
+    .hint{font-size:13px; color:var(--muted)}
+    .top-actions{display:flex; gap:10px; align-items:center}
+    .select{appearance:none; background:rgba(255,255,255,.06); color:var(--text); border:1px solid rgba(255,255,255,.12); padding:10px 12px; border-radius:10px}
+
+    @media (max-width:520px){
+      .trigger-options{grid-template-columns:1fr}
+      .opt{font-size:14px}
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    
+    <div class="card" id="view-start">
+      <img src="logo-senac.png" alt="Logo Senac" class="logo-senac">
+      <div class="title">Descubra seu perfil profissional</div>
+      <div class="subtitle">Responda à pergunta abaixo para encontrarmos o desafio ideal para você.</div>
+      
+      <div id="trigger-question"></div>
+      <div id="trigger-options"></div>
+
+      <div class="footer-note" style="text-align:center; margin-top:24px;">Ao escolher uma opção, você será direcionado a um quiz de 5 perguntas sobre a área.</div>
+    </div>
+
+    <div class="card" id="view-quiz" style="display:none">
+      <header>
+        <div>
+          <div class="title" id="seg-title">Segmento</div>
+          <div class="subtitle" id="seg-desc">Descrição do segmento selecionado</div>
+        </div>
+        <div class="top-actions">
+          <button class="btn ghost" id="btn-reset">Voltar ao Início</button>
+        </div>
+      </header>
+
+      <div class="progress"><div class="bar" id="bar"></div></div>
+      <div class="pill" id="q-count">Pergunta 1 de 5</div>
+
+      <div class="question" id="question"></div>
+      <div class="options" id="options"></div>
+
+      <div class="controls">
+        <button class="btn ghost" id="btn-prev">Voltar</button>
+        <button class="btn secondary" id="btn-check">Conferir</button>
+        <button class="btn primary" id="btn-next">Próxima</button>
+      </div>
+      <div class="hint" id="hint"></div>
+    </div>
+
+    <div class="card" id="view-result" style="display:none">
+      <header>
+        <div>
+          <div class="title">Resultado</div>
+          <div class="subtitle" id="result-sub">Resumo do seu desempenho</div>
+        </div>
+        <div class="top-actions">
+          <button class="btn ghost" id="btn-again">Jogar novamente</button>
+        </div>
+      </header>
+
+      <div class="result-box">
+        <div id="score-line" class="pill">Acertos: 0</div>
+        <div id="profile-line">Você demonstrou afinidade com <b id="seg-name"></b>.</div>
+        <div>
+          <div class="subtitle">Sugestões de cursos</div>
+          <div class="courses" id="courses"></div>
+        </div>
+        <div class="subtitle">O que você pode fazer agora?</div>
+        <ul>
+          <li>Refaça o quiz para explorar outras trilhas de carreira.</li>
+          <li>Use as dicas de estudo para aprofundar seu conhecimento.</li>
+          <li>Converse com orientadores do Senac sobre os cursos sugeridos.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const TRIGGER_QUESTION = {
+        text: "No seu dia a dia, o que mais te atrai?",
+        options: [
+            { text: "Organizar, planejar e liderar projetos", target: 'gestao' },
+            { text: "Criar soluções com tecnologia e código", target: 'ti' },
+            { text: "Cuidar de pessoas e promover o bem-estar", target: 'saude' },
+            { text: "Expressar criatividade e realçar a beleza", target: 'beleza' },
+            { text: "Proporcionar experiências e servir com excelência", target: 'turismo' },
+            { text: "Criar, comunicar com imagens e contar histórias", target: 'artes' },
+        ]
+    };
+    
+    const SEGMENTS = [
+      {
+        id: 'gestao',
+        title: 'Gestão e Negócios',
+        desc: 'Empreendedorismo, finanças e marketing para o sucesso empresarial.',
+        courses:['Assistente Administrativo','Vendas e Prospecção','Empreendedorismo Digital'],
+        questions:[
+          {q:'Para organizar as tarefas de uma equipe, qual ferramenta é mais indicada?', options:['Calculadora','Planilha (Excel, Google Sheets)','Editor de texto'], correct:1, tip:'Planilhas são ideais para criar cronogramas, listas e controlar prazos.'},
+          {q:'O que é um "público-alvo" em marketing?', options:['Qualquer pessoa que comprar','Um grupo específico de clientes com interesses em comum','Apenas os funcionários da empresa'], correct:1, tip:'Conhecer seu público-alvo ajuda a criar campanhas mais eficientes.'},
+          {q:'Se uma empresa vende um produto por R$50 e ele custou R$30 para ser feito, qual o lucro bruto?', options:['R$30','R$50','R$20'], correct:2, tip:'Lucro Bruto = Preço de Venda - Custo.'},
+          {q:'Qual o objetivo principal do "fluxo de caixa"?', options:['Anotar ideias de produtos','Controlar as entradas e saídas de dinheiro','Criar o logo da empresa'], correct:1, tip:'Um fluxo de caixa saudável é vital para a sobrevivência de qualquer negócio.'},
+          {q:'Ao atender um cliente, qual atitude é fundamental?', options:['Falar mais do que ele','Ouvir com atenção para entender sua necessidade','Ignorar reclamações'], correct:1, tip:'A escuta ativa gera confiança e ajuda a encontrar a melhor solução.'}
+        ]
+      },
+      {
+        id: 'ti',
+        title: 'Tecnologia da Informação',
+        desc: 'Lógica, programação e design para criar soluções digitais inovadoras.',
+        courses:['Lógica de Programação','Desenvolvedor Front-end','Introdução à Cibersegurança'],
+        questions:[
+          {q:'Qual a função da tag `<img>` em HTML?', options:['Criar um parágrafo','Inserir uma imagem','Adicionar um link'], correct:1, tip:'`<img>` vem de "image" e é usada para exibir elementos visuais na página.'},
+          {q:'Em programação, o que é um "loop"?', options:['Um erro que trava o sistema','Uma instrução que se repete várias vezes','O final do código'], correct:1, tip:'Loops (como `for` e `while`) são usados para automatizar tarefas repetitivas.'},
+          {q:'O que faz um firewall em uma rede de computadores?', options:['Acelera a internet','Filtra o tráfego para bloquear acessos não autorizados','Organiza os arquivos'], correct:1, tip:'O firewall é uma barreira de segurança essencial contra ataques.'},
+          {q:'Qual a principal diferença entre `Front-end` e `Back-end`?', options:['Front-end é a parte visual; Back-end é a lógica do servidor','Front-end é mais difícil','Não há diferença'], correct:0, tip:'Front-end é o que você vê (layout, botões), Back-end é o que acontece por trás (banco de dados, logins).'},
+          {q:'O que significa a sigla "UX Design"?', options:['Design Ultra X','Experiência do Usuário (User Experience)','Extra-Upgrade Design'], correct:1, tip:'UX foca em tornar um site ou app fácil, intuitivo e agradável de usar.'}
+        ]
+      },
+      {
+        id: 'saude',
+        title: 'Saúde',
+        desc: 'Cuidado, protocolos e primeiros socorros para promover a vida.',
+        courses:['Primeiros Socorros','Cuidador de Idosos','Técnico em Enfermagem'],
+        questions:[
+          {q:'Ao encontrar alguém engasgado, qual a primeira manobra a se tentar?', options:['Oferecer água','Manobra de Heimlich','Deixar a pessoa sozinha'], correct:1, tip:'A Manobra de Heimlich aplica pressão no abdômen para expelir o objeto.'},
+          {q:'Qual a forma mais eficaz de prevenir a transmissão de infecções em um hospital?', options:['Usar apenas luvas','Higienizar as mãos corretamente','Evitar contato com pacientes'], correct:1, tip:'Lavar as mãos com água e sabão ou usar álcool em gel é a medida mais importante.'},
+          {q:'O que significa a sigla "EPI" na área da saúde?', options:['Equipamento de Primeira Intervenção','Equipamento de Proteção Individual','Exame Padrão Inicial'], correct:1, tip:'EPIs incluem luvas, máscaras e aventais para proteger profissional e paciente.'},
+          {q:'Para que serve um termômetro?', options:['Medir a pressão arterial','Verificar a temperatura corporal','Ouvir os batimentos cardíacos'], correct:1, tip:'A febre (temperatura elevada) é um sinal importante de que algo está errado no corpo.'},
+          {q:'Em caso de queimadura leve na pele, o que se deve fazer primeiro?', options:['Passar pasta de dente','Resfriar o local com água corrente','Estourar as bolhas'], correct:1, tip:'Água fria ajuda a aliviar a dor e a interromper o dano na pele. Nunca use receitas caseiras.'}
+        ]
+      },
+      {
+        id: 'beleza',
+        title: 'Beleza e Estética',
+        desc: 'Técnicas, tendências e biossegurança para realçar a autoestima.',
+        courses:['Cabeleireiro','Maquiagem Profissional','Designer de Sobrancelhas'],
+        questions:[
+          {q:'Antes de aplicar maquiagem em uma cliente, qual é o passo essencial?', options:['Aplicar a base diretamente','Limpar e hidratar a pele','Não fazer nada'], correct:1, tip:'Uma pele bem preparada garante que a maquiagem dure mais e fique mais bonita.'},
+          {q:'Na colorimetria capilar, qual cor neutraliza o tom amarelado dos cabelos loiros?', options:['Verde','Laranja','Violeta (Roxo)'], correct:2, tip:'No círculo de cores, o violeta é oposto ao amarelo, por isso o neutraliza.'},
+          {q:'Por que a esterilização de ferramentas como alicates e pinças é obrigatória?', options:['Para deixá-las mais bonitas','Para evitar a transmissão de doenças','Para que durem mais'], correct:1, tip:'A esterilização em autoclave elimina todos os microrganismos, garantindo a segurança.'},
+          {q:'Qual a função do "primer" na maquiagem?', options:['Substituir o batom','Preparar a pele, suavizando poros e linhas','Remover a maquiagem'], correct:1, tip:'O primer cria uma superfície lisa para a aplicação da base e aumenta sua durabilidade.'},
+          {q:'No design de sobrancelhas, o que se busca alcançar?', options:['Deixar as duas sobrancelhas idênticas','Harmonizar o formato com as características do rosto','Afinar o máximo possível'], correct:1, tip:'O objetivo é criar um design que valorize os traços naturais da pessoa.'}
+        ]
+      },
+      {
+        id: 'turismo',
+        title: 'Turismo e Hospitalidade',
+        desc: 'Hospitalidade e serviços para criar experiências memoráveis.',
+        courses:['Recepcionista de Hotel','Organizador de Eventos','Garçom/Garçonete'],
+        questions:[
+          {q:'O que significa "check-in" em um hotel?', options:['O processo de saída do hóspede','O registro de entrada do hóspede','A limpeza do quarto'], correct:1, tip:'No check-in, o hóspede confirma a reserva, apresenta documentos e recebe a chave.'},
+          {q:'Em um restaurante, qual a atitude correta ao servir um prato ao cliente?', options:['Entregar o prato de qualquer lado','Servir preferencialmente pela direita do cliente','Perguntar se ele mesmo pode pegar'], correct:1, tip:'Seguir a etiqueta de serviço demonstra profissionalismo e cuidado.'},
+          {q:'Qual o papel de um guia de turismo?', options:['Apenas dirigir o ônibus','Apresentar informações históricas e culturais sobre um local','Vender pacotes de viagem'], correct:1, tip:'Um bom guia enriquece a viagem com conhecimento, segurança e curiosidades.'},
+          {q:'O que é "turismo sustentável"?', options:['Viajar apenas para lugares caros','Um turismo que respeita o meio ambiente e a cultura local','Ficar em casa'], correct:1, tip:'Turismo sustentável busca minimizar o impacto negativo e maximizar os benefícios para a comunidade.'},
+          {q:'Se um hóspede faz uma reclamação, qual deve ser a primeira reação do funcionário?', options:['Discordar do hóspede','Pedir desculpas e ouvir atentamente o problema','Ignorar a reclamação'], correct:1, tip:'Empatia e uma atitude solícita são essenciais para reverter uma experiência negativa.'}
+        ]
+      },
+      {
+        id: 'artes',
+        title: 'Artes, Cultura e Design',
+        desc: 'Criação, curadoria e comunicação visual com propósito.',
+        courses:['Design Gráfico','Fotografia','Edição de Vídeo'],
+        questions:[
+          {q:'No design gráfico, o que são cores "complementares"?', options:['Cores muito parecidas','Cores que ficam em lados opostos no círculo cromático','Apenas preto e branco'], correct:1, tip:'Cores complementares (como azul e laranja) criam alto contraste e impacto visual.'},
+          {q:'Na fotografia, o que é a "regra dos terços"?', options:['Tirar apenas três fotos','Posicionar os pontos de interesse nas interseções de linhas imaginárias','Usar um terço da luz disponível'], correct:1, tip:'Essa técnica ajuda a criar fotos mais equilibradas e interessantes.'},
+          {q:'Qual o objetivo de um "storyboard" na produção de um vídeo?', options:['Escrever o roteiro final','Desenhar uma sequência de cenas para planejar a filmagem','Escolher a música'], correct:1, tip:'O storyboard funciona como um "gibi" do filme, guiando a equipe de produção.'},
+          {q:'O que é a "identidade visual" de uma marca?', options:['O endereço da empresa','O conjunto de elementos visuais (logo, cores, fontes) que a representam','O número de funcionários'], correct:1, tip:'Uma identidade visual forte torna a marca facilmente reconhecível.'},
+          {q:'Para que serve o "espaço em branco" (ou respiro) em uma página ou layout?', options:['É uma área desperdiçada que deve ser preenchida','Para organizar a informação e facilitar a leitura','Para colocar anúncios'], correct:1, tip:'O espaço em branco é um elemento de design ativo que guia o olhar e evita a poluição visual.'}
+        ]
+      }
+    ];
+
+    const elStart = document.getElementById('view-start');
+    const elQuiz = document.getElementById('view-quiz');
+    const elResult = document.getElementById('view-result');
+    const triggerQ = document.getElementById('trigger-question');
+    const triggerOpts = document.getElementById('trigger-options');
+    const segTitle = document.getElementById('seg-title');
+    const segDesc = document.getElementById('seg-desc');
+    const qCount = document.getElementById('q-count');
+    const qText = document.getElementById('question');
+    const qOpts = document.getElementById('options');
+    const bar = document.getElementById('bar');
+    const hint = document.getElementById('hint');
+    const btnPrev = document.getElementById('btn-prev');
+    const btnNext = document.getElementById('btn-next');
+    const btnCheck = document.getElementById('btn-check');
+    const btnReset = document.getElementById('btn-reset');
+    const scoreLine = document.getElementById('score-line');
+    const segName = document.getElementById('seg-name');
+    const coursesWrap = document.getElementById('courses');
+    const resultSub = document.getElementById('result-sub');
+    const btnAgain = document.getElementById('btn-again');
+
+    let state = { seg: null, idx: 0, answers: [], checked: false };
+
+    function renderStartScreen(){
+        triggerQ.textContent = TRIGGER_QUESTION.text;
+        triggerOpts.innerHTML = '';
+        TRIGGER_QUESTION.options.forEach(opt => {
+            if(SEGMENTS.find(s => s.id === opt.target)){
+                const el = document.createElement('button');
+                el.className = 'trigger-opt';
+                el.textContent = opt.text;
+                el.addEventListener('click', () => startSegment(opt.target));
+                triggerOpts.appendChild(el);
+            }
+        });
+    }
+
+    function startSegment(id){
+      state.seg = SEGMENTS.find(s=>s.id===id);
+      state.idx = 0; 
+      state.answers = Array(state.seg.questions.length).fill(null); 
+      state.checked=false;
+      segTitle.textContent = state.seg.title;
+      segDesc.textContent = state.seg.desc;
+      show(elStart, false); show(elResult, false); show(elQuiz, true);
+      renderQuestion();
+    }
+
+    function renderQuestion(){
+      const {seg, idx, answers} = state;
+      const total = seg.questions.length;
+      const q = seg.questions[idx];
+      qCount.textContent = `Pergunta ${idx+1} de ${total}`;
+      qText.textContent = q.q;
+      // --- CORREÇÃO NA BARRA DE PROGRESSO ---
+      bar.style.width = `${((idx)/total)*100}%`;
+      hint.textContent = '';
+      qOpts.innerHTML = '';
+      q.options.forEach((text,i)=>{
+        const b = document.createElement('button');
+        b.className = 'opt' + (answers[idx]===i ? ' selected':'' );
+        b.textContent = text;
+        b.addEventListener('click', ()=> selectOption(i));
+        qOpts.appendChild(b);
+      });
+      btnPrev.disabled = idx===0;
+      
+      // --- CORREÇÃO NO BOTÃO "PRÓXIMA/FINALIZAR" ---
+      if (idx === total - 1) {
+          btnNext.textContent = 'Finalizar';
+      } else {
+          btnNext.textContent = 'Próxima';
+      }
+    }
+
+    function selectOption(i){
+      state.answers[state.idx] = i; state.checked=false;
+      renderQuestion();
+    }
+
+    function checkAnswer(){
+      const {seg, idx, answers} = state; const q = seg.questions[idx];
+      if(answers[idx]===null){ hint.textContent = 'Escolha uma alternativa antes de conferir.'; return; }
+      state.checked = true;
+      const nodes = [...qOpts.children];
+      nodes.forEach((n, i)=>{
+        n.classList.remove('selected');
+        if(i===q.correct) n.classList.add('correct');
+        if(i!==q.correct && i===answers[idx]) n.classList.add('wrong');
+      });
+      hint.textContent = q.tip || '';
+    }
+
+    // ==========================================================
+    // FUNÇÃO next() CORRIGIDA
+    // ==========================================================
+    function next(){
+      // Antes de avançar, atualiza a barra de progresso para a questão ATUAL
+      bar.style.width = `${((state.idx + 1) / state.seg.questions.length) * 100}%`;
+
+      // Se não estivermos na última pergunta, avança para a próxima
+      if (state.idx < state.seg.questions.length - 1) {
+          state.idx++;
+          renderQuestion();
+      } else {
+          // Se já estiver na última pergunta, finaliza o quiz
+          finish();
+      }
+    }
+
+    function prev(){ 
+        if(state.idx>0){ 
+            state.idx--; 
+            renderQuestion(); 
+            // Atualiza a barra de progresso ao voltar
+            bar.style.width = `${((state.idx) / state.seg.questions.length) * 100}%`;
+        } 
+    }
+
+    function finish(){
+      const {seg, answers} = state; const total = seg.questions.length;
+      const score = answers.reduce((acc,ans,idx)=> acc + (ans===seg.questions[idx].correct ? 1:0), 0);
+      scoreLine.textContent = `Acertos: ${score} de ${total}`;
+      segName.textContent = seg.title;
+      resultSub.textContent = `Você concluiu o quiz de ${seg.title}.`;
+      coursesWrap.innerHTML = seg.courses.map(c=>`<span class="course">${c}</span>`).join('');
+      show(elQuiz,false); show(elResult,true);
+    }
+
+    function reset(){
+      show(elResult,false); show(elQuiz,false); show(elStart,true);
+      renderStartScreen();
+    }
+
+    function show(el, visible){ el.style.display = visible? 'block':'none'; }
+
+    document.addEventListener('keydown', (e)=>{
+      const focusInQuiz = elQuiz.style.display!=="none";
+      if(!focusInQuiz) return;
+      if(e.key==='Enter'){ e.preventDefault(); checkAnswer(); }
+      if(e.key==='ArrowRight'){ e.preventDefault(); next(); }
+      if(e.key==='ArrowLeft'){ e.preventDefault(); prev(); }
+    });
+
+    btnPrev.addEventListener('click', prev);
+    btnNext.addEventListener('click', next);
+    btnCheck.addEventListener('click', checkAnswer);
+    btnReset.addEventListener('click', reset);
+    btnAgain.addEventListener('click', reset);
+    
+    reset();
+  </script>
+</body>
+</html>
